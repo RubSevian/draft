@@ -64,6 +64,7 @@ function onState(s) {
     frame.src = s.viser_url;
   }
   renderRobots(s);
+  $("#generate").textContent = s.imported ? "Build model" : "Generate";
   setStatus(s.status);
 
   $("#unsupported").hidden = !s.unsupported;
@@ -75,6 +76,7 @@ function onState(s) {
 
   const sig = JSON.stringify([
     s.robot,
+    !!s.imported,
     s.groups.map((g) => [g.title, g.params.map((p) => p.key)]),
     (s.joints || []).map((j) => j.name),
     !!s.simulate,
@@ -86,6 +88,7 @@ function onState(s) {
     buildBoard(s);
   }
   applyValues(s);
+  renderTelemetry(s.telemetry);
   drawFits(s.design_fits || []);
 }
 
@@ -130,12 +133,23 @@ function buildBoard(s) {
   inputs.clear();
   motorRows = new Map();
   chart = null;
+  fitCanvases = [];
   const board = $("#board");
   board.replaceChildren();
 
-  board.append(reportCard());
+  board.append(reportCard(s));
+  if (s.imported) {
+    const [node, body] = card("Imported robot", true);
+    body.append(el("p", "hint", "Geometry, link masses and inertias come from the source URDF. " +
+      "Drive settings, standing pose, payload and contacts are configurable below. " +
+      "Link dimensions are fixed in this imported model."));
+    board.append(node);
+    const [live, content] = card("Motor measurements", true);
+    content.id = "motor-telemetry";
+    board.append(live);
+  }
   if (s.joints && s.joints.length) board.append(poseCard(s));
-  if (fitData && fitData.points) board.append(fitsCard());
+  if (!s.imported && fitData && fitData.points) board.append(fitsCard());
   if (s.motors.classes && s.motors.classes.length) board.append(actuatorCard(s));
   if (s.densityGroup.length || Object.keys(s.densities.derived).length) board.append(densityCard(s));
   for (const g of s.groups) board.append(groupCard(g));
@@ -155,7 +169,7 @@ function groupCard(g) {
 function paramField(p) {
   const wrap = el("label", "field");
   const label = el("span");
-  label.append(el("i", "dot"), document.createTextNode(p.key));
+  label.append(el("i", "dot"), document.createTextNode(p.label || p.key));
   if (p.owner === "calibrated") label.append(el("i", "owner", "calibrated"));
   wrap.append(label);
 
@@ -444,7 +458,7 @@ function poseCard(s) {
   const [node, body] = card("Pose", true);
 
   const row = el("div", "pose-actions");
-  const sim = el("button", "btn", s.simulate ? "Stop physics" : "Simulate");
+  const sim = el("button", "btn", s.simulate ? "Stop and reset" : (s.imported ? "Simulate with motors" : "Simulate"));
   sim.id = "simulate";
   sim.ariaPressed = String(!!s.simulate);
   sim.onclick = () => send({ type: "simulate", on: !state.simulate });
@@ -455,6 +469,9 @@ function poseCard(s) {
   body.append(el("p", "hint", s.simulate
     ? "Physics owns the pose while it runs; the sliders resume when you stop."
     : "Drag a joint to pose the robot. Nothing here changes the design."));
+  if (s.imported) body.append(el("p", "hint",
+    "Motors hold the selected pose with PD control and torque-speed limits. " +
+    "This is a standing/pose test; walking needs a locomotion controller. Reset also resets simulation time and temperature."));
 
   const grid = el("div", "pose-grid");
   for (const j of s.joints) {
@@ -482,8 +499,8 @@ function poseCard(s) {
   return node;
 }
 
-function reportCard() {
-  const [node, body] = card("Feasibility report", true);
+function reportCard(s) {
+  const [node, body] = card(s.imported ? "Model report" : "Feasibility report", true);
   body.id = "report-body";
   return node;
 }
@@ -574,11 +591,11 @@ function renderReport(r) {
   if (!body) return;
   body.replaceChildren();
   if (!r) {
-    body.append(el("p", "hint", "Generate to see the feasibility report."));
+    body.append(el("p", "hint", state.imported ? "Build the model to see its mass and checks." : "Generate to see the feasibility report."));
     return;
   }
   if (r.refused) {
-    body.append(el("p", "refused-head", "Refused by the feasibility gate — nothing was written."),
+    body.append(el("p", "refused-head", state.imported ? "Model build failed. The previous build is retained." : "Refused by the feasibility gate — nothing was written."),
       el("pre", "refused", r.refused));
     return;
   }
@@ -623,6 +640,33 @@ function applyValues(s) {
   applyMotors(s.motors, active);
   applyBand(s.densities.band);
   renderReport(s.report);
+}
+
+function renderTelemetry(t) {
+  const body = $("#motor-telemetry");
+  if (!body) return;
+  body.replaceChildren();
+  if (!t) {
+    body.append(el("p", "hint", "Build the model to enable the motors."));
+    return;
+  }
+  const thermal = t.thermal_enabled
+    ? (t.thermal_calibrated ? "Temperature prediction: calibrated model." : "Temperature prediction: uncalibrated model.")
+    : "Temperature prediction is off. Thermal coefficients for the motor and its mounting are required.";
+  body.append(el("p", "hint", `Simulated time: ${t.time_s.toFixed(2)} s. ${thermal}`));
+  const table = el("table");
+  const head = el("tr");
+  for (const name of ["Joint", "Torque (N·m)", "Speed (rad/s)", "Winding (°C)", "Housing (°C)"])
+    head.append(el("th", null, name));
+  table.append(head);
+  for (const m of t.motors) {
+    const row = el("tr");
+    row.append(el("td", null, m.joint));
+    for (const value of [m.torque_nm, m.velocity_rad_s, m.winding_c, m.housing_c])
+      row.append(el("td", null, value == null ? "—" : value.toFixed(2)));
+    table.append(row);
+  }
+  body.append(table);
 }
 
 function applyMotors(m, active) {
@@ -860,3 +904,6 @@ try { showViewer = localStorage.getItem("draft.viewer") !== "0"; } catch { /* pr
 setViewer(showViewer);
 
 connect();
+setInterval(() => {
+  if (state && state.imported && state.simulate) send({ type: "telemetry" });
+}, 500);

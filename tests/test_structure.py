@@ -230,11 +230,22 @@ def _tracked() -> list[str]:
 
 
 def test_no_vendor_robot_model_is_tracked():
-    """No tracked file has a robot-model extension."""
-    offenders = [f for f in _tracked() if Path(f).suffix.lower() in MODEL_SUFFIXES]
+    """Only the explicitly vendored, attributed MEVIUS2 bundle may be tracked."""
+    import hashlib
+    import json
+    bundle = REPO / "urdf" / "mevius2"
+    manifest = json.loads((bundle / "SOURCE.json").read_text())
+    assert (bundle / "LICENSE").is_file()
+    assert len(manifest["commit"]) == 40
+    allowed = set()
+    for name, expected in manifest["files_sha256"].items():
+        path = bundle / name
+        assert path.resolve().is_relative_to(bundle.resolve())
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == expected, name
+        allowed.add(str(path.relative_to(REPO)))
+    offenders = [f for f in _tracked() if Path(f).suffix.lower() in MODEL_SUFFIXES and f not in allowed]
     assert not offenders, (
-        "vendor robot models must not be committed — they belong to their "
-        "vendors and are fetched with `scripts/setup_data.py`:\n  "
+        "unregistered vendor models must be fetched with scripts/setup_data.py:\n  "
         + "\n  ".join(offenders))
 
 

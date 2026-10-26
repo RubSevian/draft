@@ -41,3 +41,8 @@ def generated_dir() -> Path:
 def configs_dir() -> Path:
     """Experiment configuration that is not part of any robot's own spec."""
     return repo_root() / "experiments"
+
+
+def imported_configs_dir() -> Path:
+    """Profiles for imported hardware, kept outside parametric specifications."""
+    return repo_root() / "configs" / "robots"

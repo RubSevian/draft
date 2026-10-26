@@ -24,13 +24,14 @@ import yaml
 from draft.generation.generator import RobotGenerator
 from draft.paths import generated_dir
 from draft.robots import available, robot_dir
+from draft.imported.profile import profiles
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--robot", required=True,
-                    help=f"which specification to compile ({', '.join(available())})")
+                    help=f"which specification to compile ({', '.join(available() + list(profiles()))})")
     ap.add_argument("--output-dir", "--output_dir", dest="output_dir", default=None,
                     help="where to write (default: generated/<robot>_<timestamp>)")
     ap.add_argument("--fixed-output-dir", action="store_true",
@@ -41,9 +42,18 @@ def main() -> int:
                          "which is what a named design variant is")
     args = ap.parse_args()
 
+    imported = profiles().get(args.robot)
     try:
+        if imported:
+            from draft.imported.builder import build_imported
+            base = Path(args.output_dir).expanduser().resolve() if args.output_dir else generated_dir()
+            out = base if args.output_dir and args.fixed_output_dir else RobotGenerator.make_output_dir(base, args.robot)
+            overrides = yaml.safe_load(Path(args.overrides).read_text()) if args.overrides else None
+            model = build_imported(imported, out, overrides)
+            print(f"Built {model}\nScene: {out / 'scene.xml'}")
+            return 0
         src = robot_dir(args.robot)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, ValueError, TypeError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     if not ((src / "tree.yaml").exists() or (src / "tree.py").exists()):

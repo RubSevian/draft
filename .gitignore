@@ -1,5 +1,6 @@
 # Generated models — every generator writes a folder here.
 /generated/
+.venv/
 
 # Fitted-trend plot output (the JSON in */data/ is the tracked artefact).
 plots/

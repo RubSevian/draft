@@ -32,6 +32,33 @@ Training needs a CUDA GPU: add the `rl` extra (`pip install -e ".[rl]" -c
 constraints.txt`) and see [`docs/tasks.md`](docs/tasks.md).
 Everything else runs on a laptop CPU.
 
+## MEVIUS2 simulation in this fork
+
+The bundled MEVIUS2 imports the original link geometry, masses, inertias and
+joint limits. The editor can change drive settings, pose, payload and contacts,
+and run a CPU simulation with 12 PD-controlled motors.
+
+```shell
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[editor,dev]" -c constraints.txt
+python scripts/robot_tuner.py --robot mevius2
+```
+
+Open the editor URL printed in the terminal, then click **Simulate with motors**.
+For repeatable runs without a browser:
+
+```shell
+python scripts/generate_robot.py --robot mevius2 --output-dir generated/mevius2 --fixed-output-dir
+python scripts/simulate_robot.py generated/mevius2/scene.xml --seconds 60 --csv logs/mevius2.csv
+```
+
+Temperature prediction is implemented but **disabled by default**: the motor's
+thermal coefficients and mounting conditions are not known. See
+[`docs/imported-robots.md`](docs/imported-robots.md) for configuration, assumptions
+and the required thermal data. Pose control is included; a MEVIUS2 walking
+policy is not included.
+
 ## Layout
 
 ```
@@ -43,14 +70,19 @@ src/draft/
   tasks/        quadruped locomotion environments and curricula
   lineup/       the paper's training and evaluation sweep
   editor/       the browser editor
+  imported/     URDF import, controlled CPU dynamics and optional thermal model
+urdf/           attributed source URDFs and mesh assets (MEVIUS2)
+configs/robots/  imported robot mappings and simulation presets
+configs/motors/  actuator specifications and optional thermal coefficients
 datasets/       actuator catalogue and robot-description survey, with fitting scripts
 experiments/    design variants, sweep spec, frozen results
 scripts/        command-line entry points and figure scripts
 tests/          pytest; --runslow adds the twin rebuilds
 ```
 
-Vendor robot models are not included. `python scripts/setup_data.py` fetches
-them. The full documentation is in [`docs/`](docs/README.md).
+MEVIUS2 is bundled with its upstream license and source manifest. The paper's
+other vendor models are fetched by `python scripts/setup_data.py`.
+The full documentation is in [`docs/`](docs/README.md).
 
 ## Citing
 

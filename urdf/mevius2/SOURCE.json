@@ -1,0 +1,27 @@
+{
+  "repository": "https://github.com/haraduka/mevius2",
+  "commit": "4f09680bb575574377b903bbc971bdb2695d507b",
+  "source_urdf": "models/mevius2_stl.urdf",
+  "source_urdf_sha256": "c9de6dd4314f3e56ab282b05e2dcc77741ed6ed8660144203f139d2ff4b894df",
+  "modifications": [
+    "Mesh URIs changed from package://mevius2/models/meshes/ to meshes/; XML formatting normalized.",
+    "Geometry, mass, inertia, joint axes, limits and collision elements unchanged."
+  ],
+  "files_sha256": {
+    "meshes/base_link.STL": "782bdfe6c88ec98b14e7eed28a1ad4baef431e74b21638080ffc70da0c8fd74f",
+    "meshes/FR_scapula_link.STL": "ad413d6865f7781ae38198a1ef1b988a2f92d3867228d038499de3bf29aab128",
+    "meshes/FR_thigh_link.STL": "2b1b93e37d0ba8b5f2460faab311bda8db02660518dbdbbc17ef525ecd75d639",
+    "meshes/FR_calf_link.STL": "8850c27dbd7d37f00624eb7134c528e038bd471a112abb580968df3ee2dec018",
+    "meshes/FL_scapula_link.STL": "2c97b28ea676985fe7112acf3580b46fa1f53d6ffed20126b99c13f16d4b8067",
+    "meshes/FL_thigh_link.STL": "e495500192f128c6e91ed08d272ae0cc8c5b401d0a500b8ef5076aa6013d7183",
+    "meshes/FL_calf_link.STL": "99823687aeb8ec9f09c9411f9945b72048256e8fc1164f24a442603f8dff81f4",
+    "meshes/BR_scapula_link.STL": "8e777b06ed53f4cd42bd4f0af0e2cdbd62b86bc672604c79f2366228bb12e349",
+    "meshes/BR_thigh_link.STL": "c35b7a58a1924fb07061e7839c75ab3b533665791a421b7d6abdb0eeb8aa37a3",
+    "meshes/BR_calf_link.STL": "27e99b508a0e053eb9ca6d5cb093a8a2e9e57dde847c999570d52e96b0a9074f",
+    "meshes/BL_scapula_link.STL": "230dce93bbdc75074fdcb497fa68d5fd493f600c19aafa90a5eeac2855c6e434",
+    "meshes/BL_thigh_link.STL": "c8edc0ae90977c9af29ffc1c6bb0b5ca41d57ddfe276a5c106d669b1859c0d38",
+    "meshes/BL_calf_link.STL": "99823687aeb8ec9f09c9411f9945b72048256e8fc1164f24a442603f8dff81f4",
+    "mevius2.urdf": "5c9b2b0fff8ce244ea0d53f381ea7680714949f3fd37c55629a49b954b5ecaea",
+    "LICENSE": "642c1edf957dab532062b39e525157be7e823762e9d8b14a0495f635c14d83b7"
+  }
+}

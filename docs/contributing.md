@@ -33,7 +33,10 @@ Training logs to Weights & Biases, so run `wandb login` once first.
 - **No special cases.** Code should not branch on a particular robot or run; put
   such choices in a config that states them (see `terrain_scan_fix` in
   `draft.tasks.quadruped.base_env`).
-- **No vendor models in git.** A test refuses any committed `.urdf`, `.stl`,
-  `.dae`, `.obj` or `.xacro`.
+- **Imported robots** keep their URDF/assets under `urdf/`, with separate YAML
+  profiles under `configs/robots/` and `configs/motors/`. The fork explicitly
+  bundles MEVIUS2; the structure test verifies its license and manifest hashes
+  and rejects unregistered model assets. Other vendor twins are still fetched.
+  See [`imported-robots.md`](imported-robots.md).
 - Preferred libraries: Pinocchio for rigid-body dynamics, viser for 3D.
 - Comment *why*, not what.
