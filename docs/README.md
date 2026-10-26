@@ -4,7 +4,7 @@
 |---|---|
 | [`architecture.md`](architecture.md) | What is where, and the generation pipeline in order. Start here. |
 | [`robot-format.md`](robot-format.md) | Writing a robot: `parameters.yaml`, `tree.yaml`, `mesh.yaml`. |
-| [`imported-robots.md`](imported-robots.md) | MEVIUS2 URDF import, drive/payload settings and optional motor temperature prediction. |
+| [`mevius2.md`](mevius2.md) | Native MEVIUS2 dimensions, motor classes and differences from the reference URDF. |
 | [`fitted-trends.md`](fitted-trends.md) | What the trends derive, what you may state, and what refuses a design. |
 | [`provenance.md`](provenance.md) | Where each number in a generated robot comes from. |
 | [`actuator-dataset.md`](actuator-dataset.md) | The 114-actuator catalogue and its fits. |

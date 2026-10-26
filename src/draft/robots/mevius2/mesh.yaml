@@ -1,0 +1,15 @@
+# Native loft of the main URDF collision box; independently tunable dimensions.
+name: torso
+axis: x
+density_param: torso_rho
+layers:
+  - pos: ${-torso_lx / 2}
+    lx: ${torso_ly}
+    ly: ${torso_lz}
+    cy: ${torso_center_height}
+    chamfer: ${torso_chamfer}
+  - pos: ${torso_lx / 2}
+    lx: ${torso_ly}
+    ly: ${torso_lz}
+    cy: ${torso_center_height}
+    chamfer: ${torso_chamfer}

@@ -180,7 +180,6 @@ class ParamSpec:
     hint: str = ""
     #: For LAW-owned parameters: which fit derives the number, in words.
     source: str = ""
-    label: str = ""
 
     @property
     def editable(self) -> bool:

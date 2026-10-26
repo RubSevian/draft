@@ -22,7 +22,7 @@ from draft.paths import repo_root
 _REPO_ROOT = repo_root()
 from draft.trends import motor_solve
 from draft.editor.core.schema import ParamKind
-from draft.editor.core.session import EditorSession, FeasibilitySummary, build_robot
+from draft.editor.core.session import EditorSession
 from draft.editor.core import fits
 from draft.editor.shared import discover_robot_types
 from draft.editor.viewer import Viewer3D
@@ -88,7 +88,6 @@ class WebEditor:
         value = s.get(spec.key, spec.default)
         out: dict[str, Any] = {
             "key": spec.key,
-            "label": spec.label or spec.key,
             "kind": spec.kind.value,
             "owner": spec.owner.value,
             "hint": spec.hint,
@@ -191,10 +190,7 @@ class WebEditor:
                                    f"{type(exc).__name__}: {exc}")
             return base
         # One solve feeds both the actuator table and the trend panels.
-        imported = self.configs[self.robot].backend == "urdf"
-        motors = {"classes": []} if imported else self._motors_json()
-        if self.viewer.error:
-            base["status"] = {"text": self.viewer.error, "kind": "error"}
+        motors = self._motors_json()
         base.update({
             "folders": s.folders.names,
             "folder": s.folders.selected,
@@ -205,15 +201,13 @@ class WebEditor:
                              for sp in s.schema.of_kind(ParamKind.DENSITY) if sp.editable],
             "motors": motors,
             # The static catalogue and curves are sent once, on connect.
-            "design_fits": [] if imported else fits.design_points(motors),
+            "design_fits": fits.design_points(motors),
             "densities": self._densities_json(),
             # The model's joints and whether physics is running.
             "joints": self.viewer.joints(),
             "simulate": self.viewer.simulate,
             "preset": self.configs[self.robot].preset_name,
             "report": self.report,
-            "imported": imported,
-            "telemetry": self.viewer.telemetry() if imported else None,
         })
         return base
 
@@ -252,12 +246,8 @@ class WebEditor:
                 self.robot = msg["robot"]
                 self._cancel_regen()
                 self.report = None
-                self.viewer.clear()
                 self._set_status(f"{self.robot} selected.")
                 self._show_selected()
-                if self.configs[self.robot].backend == "urdf" and self.session.folders.mjcf() is None:
-                    await self._generate()
-                    return
 
         elif kind == "select_folder":
             s = self.session
@@ -275,8 +265,6 @@ class WebEditor:
             self._schedule_regen()
 
         elif kind == "motor_patch":
-            if self.configs[self.robot].backend == "urdf":
-                raise ValueError("Use the imported model's drive parameters")
             cls, field = msg["cls"], msg["field"]
             value = msg["value"] if field == "mode" else float(msg["value"])
             self.session.motors.set({f"{cls}_motor_{field}": value})
@@ -308,13 +296,8 @@ class WebEditor:
             else:
                 self._set_status(f"Saving {name}…")
                 await self.broadcast()
-                selected_robot = self.robot
-                s = self.session
-                async with self._lock:
-                    out = await asyncio.to_thread(s.save_as, name)
-                if self.robot == selected_robot:
-                    self._show_selected()
-                    self._set_status(f"Saved → {out.name}", "ok")
+                out = await asyncio.to_thread(self.session.save_as, name)
+                self._set_status(f"Saved → {out.name}", "ok")
 
         elif kind == "set_joint":
             # No broadcast: a drag sends one per frame.
@@ -341,20 +324,8 @@ class WebEditor:
         except Exception:
             return          # `state()` reports why; the 3D tab just stays empty
         if mjcf is not None:
-            if not self.viewer.load_model(mjcf):
-                self._set_status(self.viewer.error or "Could not load model", "error")
-                return
-            report = FeasibilitySummary.read(mjcf.parent)
-            self.report = self._report_dict(report)
+            self.viewer.load_model(mjcf)
             self.viewer.set_status(f"Viewing: **{self.session.folders.selected}**")
-        else:
-            self.viewer.clear()
-
-    @staticmethod
-    def _report_dict(report):
-        return ({"total_mass_kg": report.total_mass_kg, "mass_kg": report.mass_kg,
-                 "checks": report.checks, "warnings": report.warnings}
-                if report is not None else None)
 
     # ── generation ────────────────────────────────────────────────────────────
 
@@ -373,35 +344,24 @@ class WebEditor:
             await asyncio.sleep(REGEN_DEBOUNCE)
         except asyncio.CancelledError:
             return
-        # Once compilation starts, cancellation cannot stop the worker thread.
-        # Only cancel the debounce timer, otherwise two writers could overlap.
-        self._regen_task = None
         await self._generate()
 
     async def _generate(self) -> None:
         """Build the current design, serialised (builds share an output folder)."""
         async with self._lock:
             s = self.session
-            selected_robot = self.robot
-            params = s.collect()
-            output_dir = s.folders.ensure_selected()
             self._set_status(f"Generating {self.robot}…")
             await self.broadcast()
-            result = await asyncio.to_thread(build_robot, s.config, params, output_dir)
-            s.folders.refresh()
-            # A different tab/client can select another robot during compilation.
-            if self.robot != selected_robot or s.folders.selected_dir != output_dir:
-                return
+            result = await asyncio.to_thread(s.generate)
             if not result.ok:
-                self.viewer.set_simulate(False)
                 self.report = {"refused": str(result.error)}
                 self._set_status(f"Generation failed: {result.error}", "error")
             else:
-                self.report = self._report_dict(result.report)
-                if not self.viewer.load_model(result.mjcf_path):
-                    self._set_status(self.viewer.error or "Could not load model", "error")
-                    await self.broadcast()
-                    return
+                r = result.report
+                self.report = ({"total_mass_kg": r.total_mass_kg, "mass_kg": r.mass_kg,
+                                "checks": r.checks, "warnings": r.warnings}
+                               if r is not None else None)
+                self.viewer.load_model(result.mjcf_path)
                 self.viewer.set_status(f"Viewing: **{result.output_dir.name}**")
                 self._set_status(f"Generated {result.output_dir.name}.", "ok")
             await self.broadcast()

@@ -33,10 +33,9 @@ Training logs to Weights & Biases, so run `wandb login` once first.
 - **No special cases.** Code should not branch on a particular robot or run; put
   such choices in a config that states them (see `terrain_scan_fix` in
   `draft.tasks.quadruped.base_env`).
-- **Imported robots** keep their URDF/assets under `urdf/`, with separate YAML
-  profiles under `configs/robots/` and `configs/motors/`. The fork explicitly
-  bundles MEVIUS2; the structure test verifies its license and manifest hashes
-  and rejects unregistered model assets. Other vendor twins are still fetched.
-  See [`imported-robots.md`](imported-robots.md).
+- **Vendor models:** the fork explicitly bundles the MEVIUS2 reference under
+  `urdf/mevius2/` with license, source revision and checksums. The structure test
+  verifies that bundle and rejects unregistered assets. The editable model is
+  ordinary YAML under `src/draft/robots/mevius2/`; no robot-specific Python.
 - Preferred libraries: Pinocchio for rigid-body dynamics, viser for 3D.
 - Comment *why*, not what.

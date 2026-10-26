@@ -5,7 +5,7 @@ A session owns the design; a frontend owns widgets.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -21,8 +21,7 @@ from draft.editor.shared import RobotTypeConfig, load_yaml, new_timestamped_dir,
 
 # Output YAMLs in a generated folder, not designs to load back in.
 # `*_inertial_properties.yaml` is prefixed by the root body's name.
-_NON_PARAMETER_YAML = frozenset({"parameters_resolved.yaml", "feasibility_report.yaml",
-                                "simulation.yaml", "import_report.yaml"})
+_NON_PARAMETER_YAML = frozenset({"parameters_resolved.yaml", "feasibility_report.yaml"})
 
 
 def is_parameter_yaml(path: Path) -> bool:
@@ -191,8 +190,7 @@ class FeasibilitySummary:
     @classmethod
     def read(cls, output_dir: Path) -> "FeasibilitySummary | None":
         try:
-            path = output_dir / "import_report.yaml"
-            report = load_yaml(path if path.exists() else output_dir / "feasibility_report.yaml")
+            report = load_yaml(output_dir / "feasibility_report.yaml")
         except Exception:
             return None
         return cls(
@@ -216,22 +214,16 @@ def build_robot(config: RobotTypeConfig, params: dict,
                 output_dir: Path) -> GenerateResult:
     """Write the design next to its output and run the generator over it.
 
-    Parametric designs retain rejected input for editing. Imported builds stage
-    and validate all outputs first, keeping the previous successful build.
+    The parameters are written first, so a design the build rejects is kept.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     payload = to_python(params)
-    if config.backend != "urdf":
-        (output_dir / "parameters_from_gui.yaml").write_text(
-            yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+    (output_dir / "parameters_from_gui.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
     robot_dir = config.robot_dir or config.yaml_path.parent
     try:
-        if config.backend == "urdf":
-            from draft.imported.builder import build_imported
-            build_imported(config.yaml_path, output_dir, payload)
-        else:
-            RobotGenerator(robot_dir).generate(output_dir, params_override=payload)
+        RobotGenerator(robot_dir).generate(output_dir, params_override=payload)
     except Exception as exc:
         return GenerateResult(False, output_dir, error=str(exc))
 
@@ -272,8 +264,6 @@ class EditorSession:
     def starting_params(self) -> dict[str, Any]:
         """The robot's shipped table with its preset applied on top."""
         params = load_yaml(self.config.yaml_path)
-        if self.config.backend == "urdf":
-            return dict(params["parameters"])
         preset = self.config.preset_path
         if preset is not None:
             try:
@@ -288,12 +278,6 @@ class EditorSession:
         Lets a design declare motor classes the shipped table does not.
         """
         self.schema = RobotSchema(params)
-        if self.config.backend == "urdf":
-            from draft.imported.profile import parameter_group, PARAMETER_LABELS
-            self.schema.specs = {
-                key: replace(spec, group=parameter_group(key),
-                             label=PARAMETER_LABELS.get(key, key))
-                for key, spec in self.schema.specs.items()}
         self.motors = MotorInputs(self.schema.motor_classes)
         self._seed(params, replace=True)
 
@@ -328,8 +312,6 @@ class EditorSession:
         self.motors.seed(data)
 
     def set(self, key: str, value: Any) -> None:
-        if self.config.backend == "urdf" and key not in self.schema.specs:
-            raise ValueError(f"Unknown imported robot parameter {key}")
         self.values[key] = self.schema.coerce(key, value)
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -392,8 +374,6 @@ class EditorSession:
         out = self.folders.base / f"{self.config.output_prefix}_{slug}"
         out.mkdir(parents=True, exist_ok=True)
         result = build_robot(self.config, self.collect(), out)
-        if not result.ok:
-            raise ValueError(result.error)
         self.folders.refresh()
         self.folders.select(out.name)
-        return result.output_dir
+        return result.output_dir if result.ok else out

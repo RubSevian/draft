@@ -1,6 +1,6 @@
 # Imported robot assets
 
-Keep source geometry here and simulation choices in `configs/`.
+Keep source geometry here and editable specifications in `src/draft/robots/`.
 
 `mevius2/` contains the STL URDF and its 13 referenced meshes from
 [haraduka/mevius2](https://github.com/haraduka/mevius2), revision
@@ -8,9 +8,9 @@ Keep source geometry here and simulation choices in `configs/`.
 `SOURCE.json` records the source file, modifications and SHA-256 hashes.
 Only mesh paths and XML formatting were changed in the bundled URDF.
 
-The source URDF keeps its fixed root and original names. The importer adds the
-floating base, explicit joint mappings, actuators, sensors, floor and optional
-payload to generated output. Do not edit source assets to tune a simulation.
-The generated folder includes its meshes and can be moved independently.
+The source URDF keeps its fixed root, original names and physical properties.
+The native `src/draft/robots/mevius2/` YAML specification reproduces its joint
+kinematics using Draft's parametric primitives and common mass/motor sizing.
+Changing dimensions changes the generated model, not these reference files.
 
-See [`docs/imported-robots.md`](../docs/imported-robots.md).
+See [`docs/mevius2.md`](../docs/mevius2.md).

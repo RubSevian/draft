@@ -1,0 +1,106 @@
+# MEVIUS2's joint-to-joint transforms, with native Draft geometry/motor sizing.
+# Original BL/BR become rl/rr. All hinge axes remain +x/+y, including rear legs.
+name: torso_link
+type: root
+color: ${torso_color}
+pos: [0, 0, "${upper_leg_link_length + lower_leg_link_length + foot_sphere_r - hip_mount_height}"]
+sites:
+  - {name: imu, pos: [0, 0, 0]}
+sensors:
+  - {type: gyro, name: imu_ang_vel, site: imu}
+  - {type: velocimeter, name: imu_lin_vel, site: imu}
+  - {type: accelerometer, name: imu_lin_acc, site: imu}
+  - {type: subtreeangmom, name: root_angmom, body: torso_link}
+
+children:
+  - for_each: ${legs}
+    as: leg
+    node:
+      name: ${leg.name}_roll_motor_link
+      type: basic
+      pos: ["${leg.front * (torso_lx / 2 + hip_mount_x_offset)}", "${leg.side * shoulder_width / 2}", "${hip_mount_height}"]
+      joint: null
+      geometry:
+        link_l: 0
+        motor_axis: x
+        motor_class: ${hip_roll_mot}
+        motor_for: hip_roll
+        motor_shift: ["${-leg.front * hip_roll_motor_L / 2}", 0, 0]
+      children:
+        - name: ${leg.name}_roll_link
+          type: basic
+          pos: [0, 0, 0]
+          joint:
+            name: ${leg.name}_hip_roll
+            axis: x
+            range: ${hip_roll_range}
+            motor_class: ${hip_roll_mot}
+          geometry:
+            link_axis: ${leg.fore_axis}
+            link_l: ${hip_abduction_link_length}
+            link_mass_class: hip_link
+            motor_axis: ${leg.side_axis}
+            motor_class: ${hip_pitch_mot}
+            motor_for: hip_pitch
+            motor_shift: [0, "${leg.side * (hip_lateral_offset - hip_pitch_motor_L / 2)}", 0]
+          children:
+            - name: ${leg.name}_pitch_link
+              type: basic
+              pos: ["${leg.front * hip_abduction_link_length}", "${leg.side * hip_lateral_offset}", 0]
+              joint:
+                name: ${leg.name}_hip_pitch
+                axis: y
+                range: ${hip_pitch_range}
+                motor_class: ${hip_pitch_mot}
+              geometry:
+                link_axis: ${leg.side_axis}
+                link_l: ${hip_roll_link_length}
+                link_mass_class: thigh
+                link_render_r: ${upper_leg_link_render_r}
+                motor_axis: ${leg.side_axis}
+                motor_class: ${knee_mot}
+                motor_for: knee
+              children:
+                - name: ${leg.name}_upper_leg_link
+                  type: basic
+                  pos: [0, "${leg.side * hip_roll_link_length}", 0]
+                  joint: null
+                  geometry:
+                    link_axis: -z
+                    link_l: ${upper_leg_link_length}
+                    link_mass_class: thigh
+                    link_render_r: ${upper_leg_link_render_r}
+                    link_rho: ${thigh_rho}
+                    taper: leg
+                    taper_depth: 1
+                    taper_r_max: ${knee_motor_r}
+                    motor_axis: ${leg.side_axis}
+                    motor_class: ${knee_mot}
+                    motor_r: ${knee_motor_r * knee_pivot_scale}
+                    motor_L: ${knee_motor_L * knee_pivot_scale}
+                    motor_rho: 0
+                  children:
+                    - name: ${leg.name}_lower_leg_link
+                      type: sphere
+                      pos: [0, 0, "${-upper_leg_link_length}"]
+                      joint:
+                        name: ${leg.name}_knee
+                        axis: y
+                        range: ${knee_range}
+                        motor_class: ${knee_mot}
+                      geometry:
+                        link_axis: z
+                        link_l: ${lower_leg_link_length}
+                        link_mass_class: shank
+                        link_render_r: ${lower_leg_link_render_r}
+                        link_rho: ${shank_rho}
+                        taper: leg
+                        taper_depth: 2
+                        taper_r_max: ${knee_motor_r}
+                        sphere_dir: -1
+                        sphere_r: ${foot_sphere_r}
+                        sphere_rho: ${foot_mass_kg / (4 * pi * foot_sphere_r**3 / 3)}
+                        sphere_color: ${foot_color}
+                      sites:
+                        - name: ${leg.name}_foot
+                          pos: ["${foot_x_offset}", 0, "${-lower_leg_link_length}"]

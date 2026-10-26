@@ -19,6 +19,7 @@ topic, and each package states its own claim at the top of its own README.
 | run or write code here | [`docs/contributing.md`](docs/contributing.md) |
 | fetch the vendor descriptions, or wonder why a twin skipped | [`docs/fetching-robots.md`](docs/fetching-robots.md) |
 | write a `tree.yaml` | [`docs/robot-format.md`](docs/robot-format.md) |
+| work on this fork's MEVIUS2 specification | [`docs/mevius2.md`](docs/mevius2.md) |
 | recreate a result from the paper | [`docs/reproducing.md`](docs/reproducing.md) |
 | redraw a figure from the paper | [`scripts/figures/README.md`](scripts/figures/README.md) |
 
@@ -47,11 +48,11 @@ topic, and each package states its own claim at the top of its own README.
   physics rather than fitted.
 - **A design cannot opt out of the feasibility gate**, and values it states for
   a quantity the trends own are ignored and recorded as overridden.
-- **The fork bundles MEVIUS2 under `urdf/mevius2/`**, with its upstream license,
-  pinned revision and checksums. Its import/simulation profiles live separately
-  in `configs/robots/` and `configs/motors/`; see `docs/imported-robots.md`.
-  The paper's vendor twins are still fetched with `scripts/setup_data.py`.
-  A test rejects model assets outside the registered bundle.
+- **MEVIUS2 is a native YAML specification** under `src/draft/robots/mevius2/`,
+  using the ordinary generator and editor. Its original URDF/STLs are kept in
+  `urdf/mevius2/` with upstream license, pinned revision and checksums; the
+  structure test permits only this registered bundle. Other vendor models are
+  fetched with `scripts/setup_data.py` as before.
 - **The paper's sweep is not uniform in `terrain_scan_fix`.** Its terrain
   cells used the corrected torso scan and its other cells did not, so every
   config states the flag explicitly. The default is `all` (corrected), and
@@ -67,7 +68,6 @@ topic, and each package states its own claim at the top of its own README.
 (the §V sweep) are the paper. `editor/` is not, but it is how a design is
 normally built.
 
-The fork's `imported/` backend preserves measured URDF properties instead of
-applying the parametric feasibility/trends pipeline. It is outside the paper.
+The fork also includes the MEVIUS2 specification, outside the paper's results.
 The paper's humanoid appears as a generation example and as a twin target,
 never as a policy.

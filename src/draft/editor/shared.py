@@ -67,7 +67,6 @@ class RobotTypeConfig:
     #: Overrides on `parameters.yaml` a fresh start applies: the alphabetically
     #: first `presets/*.yaml`, or None to start from the shipped table.
     preset_path: Path | None = None
-    backend: str = "parametric"
 
     @property
     def preset_name(self) -> str | None:
@@ -95,12 +94,6 @@ def discover_robot_types(repo_root: Path) -> dict[str, RobotTypeConfig]:
             robot_dir=d,
             preset_path=presets[0] if presets else None,
         )
-    for path in sorted((repo_root / "configs" / "robots").glob("*.yaml")):
-        if path.stem in configs:
-            raise ValueError(f"Duplicate robot profile {path.stem}")
-        configs[path.stem] = RobotTypeConfig(
-            name=path.stem, yaml_path=path, mjcf_filename=f"{path.stem}.xml",
-            output_prefix=path.stem, backend="urdf")
     return configs
 
 
