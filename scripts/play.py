@@ -163,6 +163,8 @@ def main() -> None:
             else Path("motor_curves.png")
         )
         motor_logger.plot(save_path=plot_path)
+        if len(motor_logger._tau) >= 2:
+            motor_logger.save_trace(plot_path.with_name("motor_trace.npz"))
 
     env.close()
 

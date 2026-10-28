@@ -31,7 +31,9 @@ class MotorLogger:
         """
         base_env = env.unwrapped
         self._entity = base_env.scene[entity_name]
+        self._base_env = base_env
         self._env_idx = env_idx
+        self._step_dt = float(base_env.step_dt)
         self.joint_names: list[str] = list(self._entity.joint_names)
 
         # Per-joint limits from the live actuators, in joint_names order.
@@ -39,6 +41,7 @@ class MotorLogger:
 
         self._vel: list[np.ndarray] = []
         self._tau: list[np.ndarray] = []
+        self._resets: list[bool] = []
 
     # ------------------------------------------------------------------
     # Limit extraction
@@ -93,6 +96,23 @@ class MotorLogger:
         tau = data.qfrc_actuator[self._env_idx].detach().cpu().numpy().copy()
         self._vel.append(v)
         self._tau.append(tau)
+        self._resets.append(bool(self._base_env.reset_buf[self._env_idx].item()))
+
+    def save_trace(self, path: str | Path) -> None:
+        """Save actual sampled loads for offline analysis (including thermal estimates).
+
+        Episodes are consecutive simulated loads; this does not certify a stable gait.
+        """
+        if len(self._tau) < 2:
+            raise ValueError("At least two recorded samples are required.")
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(path,
+            time_s=np.arange(len(self._tau)) * self._step_dt,
+            torque_Nm=np.asarray(self._tau), velocity_rad_s=np.asarray(self._vel),
+            peak_torque_Nm=self.effort, no_load_speed_rad_s=self.v_nl,
+            joint_names=np.asarray(self.joint_names),
+            episode_reset=np.asarray(self._resets))
 
     # ------------------------------------------------------------------
     # Joint grouping (mirror pairs share a subplot)

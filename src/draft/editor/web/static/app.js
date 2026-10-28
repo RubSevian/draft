@@ -174,10 +174,27 @@ function paramField(p) {
   }
   input.title = p.hint || p.key;
   const emit = () => sendCoalesced(p.key, { type: "patch", key: p.key, value: readInput(input, p.kind) });
-  input.addEventListener(p.kind === "text" ? "change" : "input", emit);
+  if (input.type === "number") bindNumber(input, p.key, emit,
+    () => input.dataset.lastValid);
+  if (input.type !== "number") input.addEventListener(p.kind === "text" ? "change" : "input", emit);
   wrap.append(input);
   inputs.set(p.key, { input, kind: p.kind, label });
   return wrap;
+}
+
+// Empty/partial numeric edits must never become Number("") === 0.
+function bindNumber(input, id, emit, restore, positive = false) {
+  const valid = () => input.value.trim() !== "" && Number.isFinite(input.valueAsNumber)
+    && (!positive || input.valueAsNumber > 0);
+  input.addEventListener("focus", () => { input.dataset.lastValid = input.value; });
+  input.addEventListener("input", () => {
+    if (!valid()) { pending.delete(id); return; }
+    input.dataset.lastValid = input.value;
+    emit();
+  });
+  input.addEventListener("blur", () => {
+    if (!valid()) input.value = restore() ?? input.dataset.lastValid ?? "";
+  });
 }
 
 const readInput = (input, kind) =>
@@ -233,6 +250,8 @@ function actuatorCard(s) {
     const sw = el("i", "swatch");
     sw.style.background = seriesColor(i);
     name.append(sw, document.createTextNode(c.cls));
+    const catalog = el("div", "hint");
+    name.append(catalog);
     tr.append(name);
 
     const modeCell = el("td");
@@ -247,8 +266,10 @@ function actuatorCard(s) {
       const td = el("td");
       const inp = el("input");
       inp.type = "number"; inp.step = "any";
-      inp.addEventListener("input", () => sendCoalesced(`${c.cls}.${field}`,
-        { type: "motor_patch", cls: c.cls, field, value: Number(inp.value) }));
+      inp.setAttribute("aria-label", `${c.cls} ${field}`);
+      bindNumber(inp, `${c.cls}.${field}`, () => sendCoalesced(`${c.cls}.${field}`,
+        { type: "motor_patch", cls: c.cls, field, value: inp.valueAsNumber }),
+        () => state.motors.classes.find((item) => item.cls === c.cls)?.[key], true);
       td.append(inp);
       tr.append(td);
       fields[key] = inp;
@@ -260,7 +281,7 @@ function actuatorCard(s) {
       tr.append(out[k]);
     }
     tbody.append(tr);
-    motorRows.set(c.cls, { mode, fields, out });
+    motorRows.set(c.cls, { mode, fields, out, catalog });
   });
   table.append(tbody);
   body.append(table);
@@ -629,6 +650,10 @@ function applyMotors(m, active) {
   for (const c of m.classes || []) {
     const row = motorRows.get(c.cls);
     if (!row) continue;
+    const part = c.catalog;
+    row.catalog.textContent = part
+      ? `${part.vendor} ${part.name} · Catalogue: peak ${part.tau_peak_Nm} N·m; no-load ${part.no_load_rpm_output} rpm; ${part.mass_kg} kg; ${part.OD_mm} × ${part.L_mm} mm; reduction ${part.gear}:1. Design values are shown separately.`
+      : (c.catalog_name ? `${c.catalog_name}: not found in catalogue` : "Custom design");
     if (row.mode !== active) row.mode.value = c.mode;
     for (const [key, , field] of COLS) {
       const inp = row.fields[key];

@@ -1,0 +1,12 @@
+# Native quadruped task, local-only logging; sized for an 8 GB GPU.
+task: quadruped
+run_name: mevius2_flat
+logger: tensorboard
+upload_model: false
+n_envs: 256
+play_n_envs: 1
+max_iterations: 1000
+save_interval: 50
+device: cuda:0
+env_kwargs:
+  robot_xml: generated/mevius2/mevius2.xml

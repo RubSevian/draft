@@ -32,6 +32,64 @@ Training needs a CUDA GPU: add the `rl` extra (`pip install -e ".[rl]" -c
 constraints.txt`) and see [`docs/tasks.md`](docs/tasks.md).
 Everything else runs on a laptop CPU.
 
+## Локальный запуск через uv (MEVIUS2)
+
+**[Пошаговая инструкция: модель → обучение → испытания → температура → сравнение](docs/mevius2-workflow.md).**
+
+Рабочая среда — `.venv`, Python 3.11. В этой копии она уже создана.
+Для новой копии сначала выполните `uv venv --python 3.11 .venv`.
+Все команды ниже выполняются из корня `draft`; активация окружения не нужна.
+
+```shell
+cd "/home/ruben/Desktop/RAS/Robot dog/draft"
+# Генератор, редактор и графики температуры (без CUDA):
+uv pip install --python .venv/bin/python -e ".[editor,dev]" mjviser matplotlib -c constraints.txt
+.venv/bin/python scripts/generate_robot.py --robot mevius2 --output-dir generated/mevius2 --fixed-output-dir
+.venv/bin/python scripts/robot_tuner.py --port 8081 --viser-port 8080
+```
+
+Открыть **http://localhost:8081**, выбрать **mevius2**. Терминал оставить
+открытым; остановка — `Ctrl+C`. Если редактор уже запущен службой, перед
+ручным запуском остановите её: `systemctl --user stop draft-editor`.
+Генерация по команде выше перезаписывает `generated/mevius2`; сохраните
+изменённый вариант через редактор перед повторной генерацией.
+
+Для управления моторами и обучения нужен Linux с NVIDIA/CUDA
+(`nvidia-smi` должен видеть GPU). Дополнительные пакеты из `[rl]`:
+PyTorch, mjlab, MuJoCo Warp, Warp, rsl-rl и W&B; версии заданы в
+`pyproject.toml`. Загрузка занимает несколько ГБ. Наш конфиг пишет логи
+локально в TensorBoard и не требует входа в W&B.
+
+```shell
+uv pip install --python .venv/bin/python -e ".[rl]" -c constraints.txt
+# Проверка CUDA после установки:
+.venv/bin/python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+# Короткая проверка среды с нулевыми действиями — контроллер ходьбы ещё не обучен:
+.venv/bin/python scripts/check_robot_rollout.py --config experiments/mevius2.yaml
+# Обучение собственного контроллера MEVIUS2 (256 экземпляров, 1000 итераций):
+.venv/bin/python scripts/train.py --config experiments/mevius2.yaml
+# После обучения — просмотр последнего checkpoint:
+.venv/bin/python scripts/play.py --config experiments/mevius2.yaml --viewer viser
+```
+
+Обучение сохраняется в `logs/mevius2_flat/`. Адрес просмотра печатается
+в терминале. При завершении просмотра сохраняется `motor_trace.npz` рядом
+с checkpoint. В этой рабочей копии уже завершён первый запуск из 1000 итераций;
+путь к весам указан в пошаговой инструкции.
+
+Предварительный нагрев для **48 В, воздуха 25 °C, крепления к дюрали**:
+
+```shell
+.venv/bin/python scripts/estimate_motor_temperature.py --trace logs/mevius2_check/motor_trace.npz
+```
+
+Результаты: `logs/mevius2_thermal/temperature.png` и CSV по суставам.
+Параметры: `experiments/mevius2_thermal.yaml`. Теплоёмкость и теплоотвод
+пока заданы предположениями: это сценарии эффективной температуры модуля,
+а не калиброванный прогноз датчика или обмотки. Проверочная запись относится
+к нулевым действиям; для анализа ходьбы укажите запись из обученного контроллера.
+Подробнее: [MEVIUS2](docs/mevius2.md).
+
 ## MEVIUS2 in this fork
 
 MEVIUS2 is a native Draft specification under `src/draft/robots/mevius2/`.

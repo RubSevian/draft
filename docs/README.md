@@ -4,6 +4,7 @@
 |---|---|
 | [`architecture.md`](architecture.md) | What is where, and the generation pipeline in order. Start here. |
 | [`robot-format.md`](robot-format.md) | Writing a robot: `parameters.yaml`, `tree.yaml`, `mesh.yaml`. |
+| [`mevius2-workflow.md`](mevius2-workflow.md) | Пошаговый запуск MEVIUS2: редактирование, обучение, испытание, запись нагрузки, температура и сравнение вариантов. |
 | [`mevius2.md`](mevius2.md) | Native MEVIUS2 dimensions, motor classes and differences from the reference URDF. |
 | [`fitted-trends.md`](fitted-trends.md) | What the trends derive, what you may state, and what refuses a design. |
 | [`provenance.md`](provenance.md) | Where each number in a generated robot comes from. |

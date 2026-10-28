@@ -36,3 +36,14 @@ the selected folder under `generated/`.
 - `web/` serves the page and its websocket on one port. The browser sends
   `{patch, key, value}` and receives the whole state back, so every number is
   solved in one place.
+
+Named motors also show reference specifications from the bundled actuator
+catalogue alongside their class in **Actuator design**. These are catalogue
+values, not the fitted values of the edited design: changing torque or speed
+does not change the reference specification. Names are set with `<class>_motor`
+in **Expressions & Text** (for example, `L_motor: RS03`).
+
+Empty or incomplete numeric edits are not sent to the solver. Leaving an empty
+field restores the last valid value; actuator design inputs must be positive.
+The **Simulate** button runs passive MuJoCo physics, not a walking controller or
+an electrical/thermal motor simulation.

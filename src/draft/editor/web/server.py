@@ -21,6 +21,7 @@ from websockets.http11 import Response
 from draft.paths import repo_root
 _REPO_ROOT = repo_root()
 from draft.trends import motor_solve
+from draft.trends.motor_catalog import find_by_name
 from draft.editor.core.schema import ParamKind
 from draft.editor.core.session import EditorSession
 from draft.editor.core import fits
@@ -113,6 +114,8 @@ class WebEditor:
             stated = s.motors.collect()
             classes.append({
                 "cls": d.cls,
+                "catalog_name": s.get(f"{d.cls}_motor", ""),
+                "catalog": find_by_name(str(s.get(f"{d.cls}_motor", ""))),
                 "mode": d.point.mode,
                 # Mode-stated inputs plus those no mode derives (aspect ratio).
                 "active": list(motor_solve.MODE_INPUTS[d.point.mode]
@@ -149,6 +152,8 @@ class WebEditor:
             "omegas": [_finite(o) for o in omegas],
             "series": [{
                 "cls": d.cls,
+                "catalog_name": s.get(f"{d.cls}_motor", ""),
+                "catalog": find_by_name(str(s.get(f"{d.cls}_motor", ""))),
                 "envelope": [_finite(v) for v in motor_solve.envelope_curve(d.point, omegas)],
                 "frontier": [_finite(v) for v in motor_solve.frontier_curve(d, omegas)],
             } for d in designs],
@@ -267,6 +272,9 @@ class WebEditor:
         elif kind == "motor_patch":
             cls, field = msg["cls"], msg["field"]
             value = msg["value"] if field == "mode" else float(msg["value"])
+            if field != "mode" and (not math.isfinite(value) or
+                    (field in {"effort", "velocity", "gear", "power", "aspect"} and value <= 0)):
+                raise ValueError("Motor design values must be finite and positive.")
             self.session.motors.set({f"{cls}_motor_{field}": value})
             self._schedule_regen()
 

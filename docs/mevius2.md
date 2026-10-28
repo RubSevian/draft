@@ -86,3 +86,48 @@ joint sliders before inspecting a standing configuration. The original controlle
 uses hip pitch 0.7 and knee −1.2 rad. Physics is the stock editor's passive
 simulation; it does not add a pose controller, walking policy or temperature
 prediction. The earlier separate import/PD/thermal backend has been removed.
+
+## Controlled simulation and training
+
+`experiments/mevius2.yaml` uses the existing quadruped task with 256 parallel
+environments (initial budget for an 8 GB GPU). Logs stay local in TensorBoard;
+no W&B account or upload is used. Install the pinned `.[rl]` extra first.
+
+```shell
+python scripts/check_robot_rollout.py --config experiments/mevius2.yaml
+python scripts/train.py --config experiments/mevius2.yaml
+python scripts/play.py --config experiments/mevius2.yaml --checkpoint logs/.../model_999.pt
+```
+
+The integration check uses zero actions around the task's nominal stance. It
+checks the control/physics pipeline, not walking ability. MEVIUS2 requires its
+own trained policy; a policy for another morphology is not evidence of success.
+Playback writes `motor_trace.npz` beside the checkpoint on exit.
+
+## Preliminary temperature estimates
+
+The user conditions in `experiments/mevius2_thermal.yaml` are 48 V, ambient 25 °C,
+and a duralumin mount. Supply voltage is recorded as context: the chosen
+motor torque/speed envelope must correspond to it; this estimator does not
+rescale the electrical model from voltage.
+
+```shell
+python scripts/estimate_motor_temperature.py --trace logs/mevius2_check/motor_trace.npz
+```
+
+The estimate uses the paper's equation (2), `P_loss = tau² * omega_NL / tau_peak`,
+and a one-node RC thermal balance. It produces per-joint CSV files and a plot
+of the hottest effective module temperature for each cooling scenario. The
+thermal resistance values 0.5/1/2 K/W and capacity 450 J/K are **unmeasured
+sensitivity assumptions**, not RS03 specifications or confidence bounds.
+The result is neither winding-hotspot temperature nor the internal sensor
+reading. No idle electronics, gearbox/iron loss, or temperature-dependent
+resistance is modeled. A short trace is not automatically repeated to claim a
+long-duration walking result. Resets in a recorded rollout count as consecutive
+loads without resetting temperature; inspect stability before interpreting it.
+
+Duralumin alone does not determine heat transfer: mount dimensions, contact
+area and airflow are needed. Calibrate against a motor heating/cooling test
+before treating the curve as a prediction or setting protection thresholds.
+Manufacturer source: https://github.com/RobStride/Product_Information
+Paper: https://arxiv.org/html/2609.38405v1#S5.SS3

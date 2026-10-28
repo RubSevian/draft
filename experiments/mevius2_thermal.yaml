@@ -1,0 +1,18 @@
+# User conditions. The RC values below are sensitivity scenarios, NOT measured RS03 data.
+supply_voltage_V: 48
+ambient_C: 25
+initial_C: 25
+mount: duralumin
+# Paper equation (2): loss = torque^2 * no_load_speed / peak_torque.
+# This is a theoretical proxy, not an identified winding-resistance model.
+loss_model: paper_copper_proxy
+scenarios:
+  stronger_cooling:
+    resistance_K_W: 0.5
+    capacity_J_K: 450
+  intermediate:
+    resistance_K_W: 1.0
+    capacity_J_K: 450
+  weaker_cooling:
+    resistance_K_W: 2.0
+    capacity_J_K: 450
